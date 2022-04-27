@@ -4,4 +4,9 @@ Control and manage ESP32 functions via BLE
 
 ## Functions
 
- - File Manager (Download, Delete Files on ESP32)
+ - [ ] File Manager
+	- [x] Download
+	- [x] Delete
+	- [ ] Upload
+ - [ ] Android App
+ - [ ] GPIO Control
