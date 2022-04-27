@@ -43,6 +43,10 @@
 #define FLASH FFat
 #endif
 
+#define ACTION_NONE 0
+#define FILE_UPLOAD 1
+#define FILE_DELETE 2
+
 #define SERVICE_UUID              "fb1e4001-54ae-4a28-9f74-dfccb248601d"
 #define CHARACTERISTIC_UUID_RX    "fb1e4002-54ae-4a28-9f74-dfccb248601d"
 #define CHARACTERISTIC_UUID_TX    "fb1e4003-54ae-4a28-9f74-dfccb248601d"
@@ -51,8 +55,9 @@ static BLECharacteristic* pCharacteristicTX;
 static BLECharacteristic* pCharacteristicRX;
 
 static bool deviceConnected = false, sendSize = true;
-static bool sendFileList = false, uploadFile = false;
+static bool sendFileList = false;
 static String filePath = "";
+static int fileActionCode = ACTION_NONE;
 
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -113,6 +118,16 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         if (pData[0] == 0xEF) {
           FLASH.format();
           sendSize = true;
+        } else if (pData[0] == 0xCC) {
+          sendFileList = true;
+        }  else if (pData[0] == 0xCD) {
+          fileActionCode = pData[1];
+          String nm = "";
+          for (int i = 2; i < len; i++) {
+            nm += (char) pData[i];
+          }
+          filePath = nm;
+          Serial.println(nm);
         }
 
 
@@ -194,9 +209,17 @@ void loop() {
       sendList(FLASH);
     }
 
-    if (uploadFile) {
-      uploadFile = false;
-      sendFile(filePath);
+    switch (fileActionCode) {
+      case FILE_UPLOAD:
+        sendFile(filePath);
+        sendList(FLASH);
+        fileActionCode = ACTION_NONE;
+        break;
+      case FILE_DELETE:
+        deleteFile(filePath);
+        sendList(FLASH);
+        fileActionCode = ACTION_NONE;
+        break;
     }
 
 
@@ -248,6 +271,24 @@ void sendList(fs::FS &fs) {
   pCharacteristicTX->setValue(en, 2);
   pCharacteristicTX->notify();
 
+}
+
+void renameFile(String path1, String path2) {
+  Serial.printf("Renaming file %s to %s\r\n", path1, path2);
+  if (FLASH.rename(path1, path2)) {
+    Serial.println("- file renamed");
+  } else {
+    Serial.println("- rename failed");
+  }
+}
+
+void deleteFile(String path) {
+  Serial.printf("Deleting file: %s\r\n", path);
+  if (FLASH.remove(path)) {
+    Serial.println("- file deleted");
+  } else {
+    Serial.println("- delete failed");
+  }
 }
 
 void sendFile(String path) {
