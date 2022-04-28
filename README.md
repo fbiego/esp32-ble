@@ -10,3 +10,4 @@ Control and manage ESP32 functions via BLE
 	- [ ] Upload
  - [ ] Android App
  - [ ] GPIO Control
+ - [ ] Time Sync
